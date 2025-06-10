@@ -93,6 +93,21 @@ const validateSignup = [
 
 // Routes
 
+
+// Get all users (for testing)
+app.get('/api/users', (req, res) => {
+  db.all(
+    'SELECT id, name, email, status, created_at FROM users ORDER BY created_at DESC',
+    (err, rows) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ success: false, message: 'Database error' });
+      }
+      res.json({ success: true, users: rows });
+    }
+  );
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
