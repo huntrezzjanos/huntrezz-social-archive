@@ -93,6 +93,10 @@ const validateSignup = [
 
 // Routes
 
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
 
 // Get all users (for testing)
 app.get('/api/users', (req, res) => {
@@ -106,11 +110,6 @@ app.get('/api/users', (req, res) => {
       res.json({ success: true, users: rows });
     }
   );
-});
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 // Submit access request
@@ -259,6 +258,71 @@ app.patch('/api/admin/users/:id', async (req, res) => {
       res.json({ success: true, message: `User ${status} successfully` });
     }
   );
+});
+
+// Admin dashboard (simple HTML page)
+app.get('/admin', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Admin Dashboard - Huntrezz Social Archive</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .user { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .pending { border-left: 4px solid #f39c12; }
+        .approved { border-left: 4px solid #27ae60; }
+        .denied { border-left: 4px solid #e74c3c; }
+        button { padding: 10px 15px; margin: 5px; border: none; border-radius: 3px; cursor: pointer; }
+        .approve { background: #27ae60; color: white; }
+        .deny { background: #e74c3c; color: white; }
+      </style>
+    </head>
+    <body>
+      <h1>Social Archive Admin Dashboard</h1>
+      <div id="users"></div>
+      
+      <script>
+        async function loadUsers() {
+          const response = await fetch('/api/users');
+          const data = await response.json();
+          const usersDiv = document.getElementById('users');
+          
+          usersDiv.innerHTML = data.users.map(user => \`
+            <div class="user \${user.status}">
+              <h3>\${user.name}</h3>
+              <p><strong>Email:</strong> \${user.email}</p>
+              <p><strong>Connection:</strong> \${user.connection || 'Not specified'}</p>
+              <p><strong>Status:</strong> \${user.status}</p>
+              <p><strong>Submitted:</strong> \${new Date(user.created_at).toLocaleString()}</p>
+              \${user.status === 'pending' ? \`
+                <button class="approve" onclick="updateStatus(\${user.id}, 'approved')">Approve</button>
+                <button class="deny" onclick="updateStatus(\${user.id}, 'denied')">Deny</button>
+              \` : ''}
+            </div>
+          \`).join('');
+        }
+        
+        async function updateStatus(userId, status) {
+          const response = await fetch(\`/api/admin/users/\${userId}\`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+          });
+          
+          if (response.ok) {
+            loadUsers(); // Reload the list
+            alert(\`User \${status} successfully!\`);
+          } else {
+            alert('Error updating user status');
+          }
+        }
+        
+        loadUsers();
+      </script>
+    </body>
+    </html>
+  `);
 });
 
 // Login endpoint (for future use)
